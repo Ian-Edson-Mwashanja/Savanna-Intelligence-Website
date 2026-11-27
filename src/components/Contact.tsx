@@ -38,18 +38,21 @@ export function ContactSection({
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    // Prevent duplicate submissions.
     if (submitting) return;
 
-    // Validate customer name.
+    setError("");
+
+    // Validate full name.
     if (name.trim().length < 2) {
       setError("Please enter your full name.");
       return;
     }
 
-    // Validate email address.
-    if (!email.trim()) {
-      setError("Please enter your email address.");
+    // Validate email.
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailPattern.test(email.trim())) {
+      setError("Please enter a valid email address.");
       return;
     }
 
@@ -59,13 +62,13 @@ export function ContactSection({
       return;
     }
 
-    // Validate selected service.
+    // Validate service.
     if (!enquiry.service) {
       setError("Please select the service you require.");
       return;
     }
 
-    // Validate project budget.
+    // Validate budget.
     if (!enquiry.budget) {
       setError("Please select your project budget.");
       return;
@@ -79,38 +82,41 @@ export function ContactSection({
       return;
     }
 
-    setError("");
     setSubmitting(true);
 
     try {
-      // Prepare form information for Netlify Forms.
-      const formData = new URLSearchParams();
+      // Get the actual form data.
+      const formElement = event.currentTarget;
+      const formData = new FormData(formElement);
 
-      formData.append("form-name", "contact");
-      formData.append("fullName", name.trim());
-      formData.append("email", email.trim());
-      formData.append("phone", phone.trim());
-      formData.append("service", enquiry.service);
-      formData.append("budget", enquiry.budget);
-      formData.append(
-        "description",
-        enquiry.description.trim()
-      );
+      // Ensure Netlify receives the correct form name.
+      formData.set("form-name", "contact");
 
-      // Submit enquiry to Netlify.
+      // Convert form data into URL-encoded format.
+      const encodedData = new URLSearchParams();
+
+      formData.forEach((value, key) => {
+        if (typeof value === "string") {
+          encodedData.append(key, value);
+        }
+      });
+
+      // Submit to Netlify Forms.
       const response = await fetch("/", {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: formData.toString(),
+        body: encodedData.toString(),
       });
 
       if (!response.ok) {
-        throw new Error("Submission failed.");
+        throw new Error(
+          `Form submission failed with status ${response.status}`
+        );
       }
 
-      // Display successful submission message.
+      // Show success message.
       setSubmitted(true);
 
     } catch (err) {
@@ -136,7 +142,7 @@ export function ContactSection({
             eyebrow="YOUR NEXT CHAPTER STARTS HERE"
             title={
               <>
-                Let’s build something
+                Let&apos;s build something
                 <br />
                 <span className="muted-title">
                   great together.
@@ -256,7 +262,18 @@ export function ContactSection({
               <button
                 type="button"
                 className="text-link"
-                onClick={() => setSubmitted(false)}
+                onClick={() => {
+                  setSubmitted(false);
+                  setName("");
+                  setEmail("");
+                  setPhone("");
+                  setEnquiry({
+                    service: "",
+                    budget: "",
+                    description: "",
+                  });
+                  setError("");
+                }}
               >
                 Submit another enquiry
                 <ArrowRight size={16} />
@@ -399,19 +416,24 @@ export function ContactSection({
                       })
                     }
                   >
-                    <option value="$120 – $349">
-                      $120 – $349
+                    <option value="">
+                      Select your budget
                     </option>
 
-                    <option value="$350 – $599">
-                      $350 – $599
+                    <option value="$120 - $349">
+                      $120 - $349
+                    </option>
+
+                    <option value="$350 - $599">
+                      $350 - $599
                     </option>
 
                     <option value="$600+">
                       $600+
                     </option>
+
                     <option value="Let's discuss">
-                      Let’s discuss
+                      Let&apos;s discuss
                     </option>
 
                   </select>
@@ -469,7 +491,7 @@ export function ContactSection({
                 <ShieldCheck size={15} />
 
                 Your enquiry will be submitted securely
-                through our website's contact form service.
+                through our website&apos;s contact form service.
               </p>
 
             </form>
